@@ -27,6 +27,9 @@ ext {
         if (rootProject.hasProperty('applicationId')) {
             applicationId = rootProject.applicationId
         }
+        if (rootProject.hasProperty('APP_ID')) {
+            applicationId = rootProject.APP_ID
+        }
         return applicationId
     }
 
