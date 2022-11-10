@@ -13,8 +13,8 @@
                        android:resource="@xml/syncadapter"/>
         </service>
         <service
-            android:exported="true"
-            android:name="com.marianhello.bgloc.sync.AuthenticatorService">
+            android:name="com.marianhello.bgloc.sync.AuthenticatorService"
+            android:exported="false">
             <intent-filter android:exported="true">
                 <action android:name="android.accounts.AccountAuthenticator"/>
             </intent-filter>
