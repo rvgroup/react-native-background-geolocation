@@ -40,6 +40,7 @@ public final class SQLiteConfigurationContract {
         public static final String COLUMN_NAME_HEADERS = "http_headers";
         public static final String COLUMN_NAME_MAX_LOCATIONS = "max_locations";
         public static final String COLUMN_NAME_TEMPLATE = "template";
+        public static final String COLUMN_NAME_IS_STARTED = "is_started";
 
         public static final String SQL_CREATE_CONFIG_TABLE =
                 "CREATE TABLE " + ConfigurationEntry.TABLE_NAME + " (" +
@@ -57,6 +58,7 @@ public final class SQLiteConfigurationContract {
                         ConfigurationEntry.COLUMN_NAME_STOP_ON_STILL + INTEGER_TYPE + COMMA_SEP +
                         ConfigurationEntry.COLUMN_NAME_START_BOOT + INTEGER_TYPE + COMMA_SEP +
                         ConfigurationEntry.COLUMN_NAME_START_FOREGROUND + INTEGER_TYPE + COMMA_SEP +
+                        ConfigurationEntry.COLUMN_NAME_IS_STARTED + INTEGER_TYPE + COMMA_SEP +
                         ConfigurationEntry.COLUMN_NAME_NOTIFICATIONS_ENABLED + INTEGER_TYPE + COMMA_SEP +
                         ConfigurationEntry.COLUMN_NAME_LOCATION_PROVIDER + TEXT_TYPE + COMMA_SEP +
                         ConfigurationEntry.COLUMN_NAME_INTERVAL + INTEGER_TYPE + COMMA_SEP +

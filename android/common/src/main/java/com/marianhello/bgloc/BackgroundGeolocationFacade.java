@@ -60,6 +60,7 @@ public class BackgroundGeolocationFacade {
     private boolean mServiceBroadcastReceiverRegistered = false;
     private boolean mLocationModeChangeReceiverRegistered = false;
     private boolean mIsPaused = false;
+    private boolean mIsStarted = false;
 
     private Config mConfig;
     private final Context mContext;
@@ -247,7 +248,10 @@ public class BackgroundGeolocationFacade {
 
     public void pause() {
         mIsPaused = true;
-        mService.startForeground();
+
+        if (getIsStartedFlag()) {
+            mService.startForeground();
+        }
     }
 
     public void resume() {
@@ -435,6 +439,8 @@ public class BackgroundGeolocationFacade {
     }
 
     private void startBackgroundService() {
+        this.setIsStartedFlag(true);
+
         logger.info("Attempt to start bg service");
         if (mIsPaused) {
             mService.startForegroundService();
@@ -444,12 +450,39 @@ public class BackgroundGeolocationFacade {
     }
 
     private void stopBackgroundService() {
+        this.setIsStartedFlag(false);
+
         logger.info("Attempt to stop bg service");
         mService.stop();
     }
 
     public boolean isRunning() {
         return ((LocationServiceProxy) mService).isRunning();
+    }
+
+    private boolean getIsStartedFlag() {
+        try {
+            Config newConfig = getStoredConfig();
+
+            return newConfig.getIsStarted();
+        } catch (PluginException e) {
+            e.printStackTrace();
+        }
+
+        return mIsStarted;
+    }
+
+    private void setIsStartedFlag(boolean value) {
+        mIsStarted = value;
+
+        try {
+            Config newConfig = getStoredConfig();
+            newConfig.setIsStarted(value);
+
+            persistConfiguration(newConfig);
+        } catch (PluginException e) {
+            e.printStackTrace();
+        }
     }
 
     private void persistConfiguration(Config config) throws NullPointerException {

@@ -63,6 +63,7 @@ public class Config implements Parcelable
     private HashMap httpHeaders;
     private Integer maxLocations;
     private LocationTemplate template;
+    private Boolean isStarted;
 
     public Config () {
     }
@@ -92,6 +93,8 @@ public class Config implements Parcelable
         this.syncThreshold = config.syncThreshold;
         this.httpHeaders = CloneHelper.deepCopy(config.httpHeaders);
         this.maxLocations = config.maxLocations;
+        this.isStarted = config.isStarted;
+
         if (config.template instanceof AbstractLocationTemplate) {
             this.template = ((AbstractLocationTemplate)config.template).clone();
         }
@@ -123,6 +126,7 @@ public class Config implements Parcelable
         Bundle bundle = in.readBundle();
         setHttpHeaders((HashMap<String, String>) bundle.getSerializable("httpHeaders"));
         setTemplate((LocationTemplate) bundle.getSerializable(AbstractLocationTemplate.BUNDLE_KEY));
+        setIsStarted((Boolean) in.readValue(null));
     }
 
     public static Config getDefault() {
@@ -151,6 +155,8 @@ public class Config implements Parcelable
         config.httpHeaders = null;
         config.maxLocations = 10000;
         config.template = null;
+
+        config.isStarted = false;
 
         return config;
     }
@@ -187,6 +193,7 @@ public class Config implements Parcelable
         bundle.putSerializable("httpHeaders", getHttpHeaders());
         bundle.putSerializable(AbstractLocationTemplate.BUNDLE_KEY, (AbstractLocationTemplate) getTemplate());
         out.writeBundle(bundle);
+        out.writeValue(getIsStarted());
     }
 
     public static final Parcelable.Creator<Config> CREATOR
@@ -346,6 +353,18 @@ public class Config implements Parcelable
 
     public void setStartForeground(Boolean startForeground) {
         this.startForeground = startForeground;
+    }
+
+    public boolean hasIsStarted() {
+        return isStarted != null;
+    }
+
+    public Boolean getIsStarted() {
+        return isStarted;
+    }
+
+    public void setIsStarted(Boolean value) {
+        this.isStarted = value;
     }
 
     public boolean hasNotificationsEnabled() {
@@ -547,6 +566,7 @@ public class Config implements Parcelable
                 .append(" httpHeaders=").append(getHttpHeaders().toString())
                 .append(" maxLocations=").append(getMaxLocations())
                 .append(" postTemplate=").append(hasTemplate() ? getTemplate().toString() : null)
+                .append(" isStarted=").append(getIsStarted())
                 .append("]")
                 .toString();
     }
@@ -638,6 +658,9 @@ public class Config implements Parcelable
         }
         if (config2.hasTemplate()) {
             merger.setTemplate(config2.getTemplate());
+        }
+        if (config2.hasIsStarted()) {
+            merger.setIsStarted(config2.getIsStarted());
         }
 
         return merger;

@@ -32,7 +32,10 @@ def hasApp = findProject(':app') != null
 // https://hackernoon.com/android-how-to-add-gradle-dependencies-using-foreach-c4cbcc070458
 def projDependencies = [
     [configuration: "implementation", dependency: libs.slf4j],
+
+    // DEBUG
     [configuration: "implementation", dependency: libs.reactNative],
+
     [configuration: "testImplementation", dependency: testLibs.testRunner],
     [configuration: "testImplementation", dependency: testLibs.testRules],
     [configuration: "testImplementation", dependency: testLibs.junit],
@@ -82,7 +85,12 @@ android {
 }
 
 dependencies {
+    implementation fileTree(include: ['*.aar'], dir: 'libs')
+
     implementation project(path: ':@thekingzoom_react-native-background-geolocation-common')
+
+    // DEBUG
+    //implementation 'androidx.annotation:annotation:1.3.0'
 
     projDependencies.each {
         add(it.configuration, it.dependency)

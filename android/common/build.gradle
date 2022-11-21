@@ -18,8 +18,11 @@ def projDependencies = [
     [configuration: "implementation", dependency: androidLibs.playServicesLocation],
     [configuration: "implementation", dependency: androidLibs.supportCompat],
     [configuration: "implementation", dependency: androidLibs.appcompat],
+
+    // DEBUG
     [configuration: "implementation", dependency: libs.permissions,
         options: { exclude group: 'com.android.support', module: 'appcompat-v7'}],
+
     [configuration: "implementation", dependency: libs.logback],
     [configuration: "implementation", dependency: libs.slf4j],
     [configuration: "implementation", dependency: libs.promise],
@@ -32,6 +35,9 @@ buildscript {
             name 'Google'
         }
         jcenter()
+        maven {
+            url 'https://repo.gradle.org/gradle/libs-releases/'
+        }
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:3.4.1'
@@ -43,6 +49,10 @@ buildscript {
 
 allprojects {
     repositories {
+        maven {
+            url 'https://repo.gradle.org/gradle/libs-releases/'
+        }
+        mavenCentral()
         maven {
             url 'https://maven.google.com'
         }
@@ -91,6 +101,9 @@ dependencies {
     projDependencies.each {
         add(it.configuration, it.dependency)
     }
+
+    //DEBUG
+    // implementation 'io.github.nishkarsh:android-permissions:0.1.7'
 
     implementation fileTree(include: ['*.jar'], dir: 'libs')
 }
