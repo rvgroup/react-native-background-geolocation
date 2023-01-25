@@ -12,6 +12,7 @@ Differences to original version:
 package com.tenforwardconsulting.bgloc;
 
 import static com.marianhello.utils.SystemUtils.getIntentFlag;
+import static com.marianhello.utils.SystemUtils.getMuttableIntentFlag;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -91,7 +92,7 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
         registerReceiver(stationaryAlarmReceiver, new IntentFilter(STATIONARY_ALARM_ACTION));
 
         // Stationary region PI
-        stationaryRegionPI = PendingIntent.getBroadcast(mContext, 0, new Intent(STATIONARY_REGION_ACTION), getIntentFlag(PendingIntent.FLAG_CANCEL_CURRENT));
+        stationaryRegionPI = PendingIntent.getBroadcast(mContext, 0, new Intent(STATIONARY_REGION_ACTION), getMuttableIntentFlag(PendingIntent.FLAG_CANCEL_CURRENT));
         registerReceiver(stationaryRegionReceiver, new IntentFilter(STATIONARY_REGION_ACTION));
 
         // Stationary location monitor PI
