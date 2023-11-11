@@ -8,7 +8,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.4.1'
+        classpath 'com.android.tools.build:gradle:4.2.2'
     }
 }
 
@@ -24,17 +24,11 @@ allprojects {
             name 'Google'
         }
         mavenCentral()
-        // repo for react-native
-        // https://mvnrepository.com/artifact/com.facebook.react/react-native?repo=springio-plugins-release
-        maven {
-            url 'http://repo.spring.io/plugins-release/'
-            name 'Spring Plugins'
-        }
     }
 }
 
 ext {
-    reactNativeLibVersion = "0.55.3"
+    reactNativeLibVersion = "0.72.6"
 }
 
 task clean(type: Delete) {

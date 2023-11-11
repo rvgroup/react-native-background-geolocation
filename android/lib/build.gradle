@@ -34,7 +34,7 @@ def projDependencies = [
     [configuration: "implementation", dependency: libs.slf4j],
 
     // DEBUG
-    [configuration: "implementation", dependency: libs.reactNative],
+    //[configuration: "implementation", dependency: libs.reactNative],
 
     [configuration: "testImplementation", dependency: testLibs.testRunner],
     [configuration: "testImplementation", dependency: testLibs.testRules],
@@ -50,17 +50,17 @@ def projDependencies = [
 ]
 
 repositories {
-    // Google dependencies are now hosted at Maven
-    // unfortunately this is ignored when installing as react-native plugin
     maven {
         url 'https://maven.google.com'
     }
     mavenCentral()
+
+    maven { url 'https://repo1.maven.org/maven2' }
 }
 
 android {
     compileSdkVersion project.ext.getCompileSdkVersion()
-    buildToolsVersion project.ext.getBuildToolsVersion()
+
     if (hasApp) {
         evaluationDependsOn(':app')
     }
@@ -95,4 +95,7 @@ dependencies {
     projDependencies.each {
         add(it.configuration, it.dependency)
     }
+
+    // DEBUG
+    implementation("com.facebook.react:react-android:0.72.6")
 }

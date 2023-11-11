@@ -1,6 +1,6 @@
 package com.marianhello.bgloc.provider;
 
-import static com.marianhello.utils.SystemUtils.getIntentFlag;
+import static com.marianhello.utils.SystemUtils.getMuttableIntentFlag;
 
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -51,7 +51,7 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
         super.onCreate();
 
         Intent detectedActivitiesIntent = new Intent(DETECTED_ACTIVITY_UPDATE);
-        detectedActivitiesPI = PendingIntent.getBroadcast(mContext, 9002, detectedActivitiesIntent, getIntentFlag(PendingIntent.FLAG_UPDATE_CURRENT));
+        detectedActivitiesPI = PendingIntent.getBroadcast(mContext, 9002, detectedActivitiesIntent, getMuttableIntentFlag(PendingIntent.FLAG_UPDATE_CURRENT));
         registerReceiver(detectedActivitiesReceiver, new IntentFilter(DETECTED_ACTIVITY_UPDATE));
     }
 

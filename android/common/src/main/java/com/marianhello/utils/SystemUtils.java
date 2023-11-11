@@ -14,7 +14,7 @@ public class SystemUtils {
 
     public static int getMuttableIntentFlag(int intent) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            return intent | PendingIntent.FLAG_MUTABLE;
+            return intent | PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
         } else {
             return intent;
         }
