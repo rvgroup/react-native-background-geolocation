@@ -1,5 +1,6 @@
 package com.marianhello.bgloc.sync;
 
+import static androidx.core.app.NotificationCompat.PRIORITY_LOW;
 import static com.marianhello.utils.SystemUtils.getIntentFlag;
 
 import android.app.Notification;
@@ -56,8 +57,14 @@ public class NotificationHelper {
             // Build a Notification required for running service in foreground.
             NotificationCompat.Builder builder = new NotificationCompat.Builder(mContext, NotificationHelper.SERVICE_CHANNEL_ID);
 
-            builder.setContentTitle(title);
-            builder.setContentText(text);
+            builder.setContentTitle(title)
+                    .setContentText(text)
+                    .setPriority(PRIORITY_LOW);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                builder.setCategory(Notification.CATEGORY_SERVICE);
+            }
+
             if (smallIcon != null && !smallIcon.isEmpty()) {
                 builder.setSmallIcon(mResolver.getDrawable(smallIcon));
             } else {
