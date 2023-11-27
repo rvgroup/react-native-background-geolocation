@@ -59,6 +59,7 @@ public class NotificationHelper {
 
             builder.setContentTitle(title)
                     .setContentText(text)
+                    .setOngoing(true)
                     .setPriority(PRIORITY_LOW);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
