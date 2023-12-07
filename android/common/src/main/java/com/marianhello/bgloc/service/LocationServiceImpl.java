@@ -10,6 +10,7 @@ This is a new class
 package com.marianhello.bgloc.service;
 
 import android.accounts.Account;
+import android.app.ForegroundServiceStartNotAllowedException;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.Service;
@@ -32,6 +33,7 @@ import android.os.Process;
 import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.marianhello.bgloc.BackgroundGeolocationFacade;
 import com.marianhello.bgloc.Config;
 import com.marianhello.bgloc.ConnectivityListener;
 import com.marianhello.bgloc.sync.NotificationHelper;
@@ -401,6 +403,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
 
     @Override
     public void startForeground() {
+        // https://stackoverflow.com/questions/70044393/fatal-android-12-exception-startforegroundservice-not-allowed-due-to-mallows
         if (sIsRunning && !mIsInForeground) {
             Config config = getConfig();
             Notification notification = new NotificationHelper.NotificationFactory(this).getNotification(
@@ -414,8 +417,22 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
                 mProvider.onCommand(LocationProvider.CMD_SWITCH_MODE,
                         LocationProvider.FOREGROUND_MODE);
             }
-            super.startForeground(NOTIFICATION_ID, notification);
-            mIsInForeground = true;
+
+            try {
+                super.startForeground(NOTIFICATION_ID, notification);
+                mIsInForeground = true;
+            } catch (Exception ex) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (ex instanceof ForegroundServiceStartNotAllowedException) {
+                        if (BackgroundGeolocationFacade.isStarted()) {
+                            LocationWorkerManager.startWorker(this);
+                        }
+                        return;
+                    }
+                }
+
+                ex.printStackTrace();
+            }
         }
     }
 
@@ -526,6 +543,13 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
         });
     }
 
+    public static void broadcastLocation(Context context, BackgroundLocation location) {
+        Bundle bundle = new Bundle();
+        bundle.putInt("action", MSG_ON_LOCATION);
+        bundle.putParcelable("payload", location);
+        LocationServiceImpl.broadcastBundle(context, bundle);
+    }
+
     @Override
     public void onLocation(BackgroundLocation location) {
         logger.debug("New location {}", location.toString());
@@ -536,10 +560,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
             return;
         }
 
-        Bundle bundle = new Bundle();
-        bundle.putInt("action", MSG_ON_LOCATION);
-        bundle.putParcelable("payload", location);
-        broadcastMessage(bundle);
+        broadcastLocation(getApplicationContext(), location);
 
         runHeadlessTask(new LocationTask(location) {
             @Override
@@ -623,9 +644,13 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
     }
 
     private void broadcastMessage(Bundle bundle) {
+        broadcastBundle(getApplicationContext(), bundle);
+    }
+
+    private static void broadcastBundle(Context context, Bundle bundle) {
         Intent intent = new Intent(ACTION_BROADCAST);
         intent.putExtras(bundle);
-        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
     }
 
     @Override

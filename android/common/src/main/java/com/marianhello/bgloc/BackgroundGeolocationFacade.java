@@ -30,6 +30,7 @@ import com.marianhello.bgloc.service.LocationService;
 import com.marianhello.bgloc.service.LocationServiceImpl;
 import com.marianhello.bgloc.service.LocationServiceProxy;
 import com.marianhello.bgloc.data.LocationTransform;
+import com.marianhello.bgloc.service.LocationWorkerManager;
 import com.marianhello.bgloc.sync.AccountHelper;
 import com.marianhello.bgloc.sync.NotificationHelper;
 import com.marianhello.bgloc.sync.SyncService;
@@ -59,8 +60,8 @@ public class BackgroundGeolocationFacade {
 
     private boolean mServiceBroadcastReceiverRegistered = false;
     private boolean mLocationModeChangeReceiverRegistered = false;
-    private boolean mIsPaused = false;
-    private boolean mIsStarted = false;
+    private static boolean mIsPaused = false;
+    private static boolean mIsStarted = false;
 
     private Config mConfig;
     private final Context mContext;
@@ -447,6 +448,8 @@ public class BackgroundGeolocationFacade {
         } else {
             mService.start();
         }
+
+        LocationWorkerManager.startWorker(mContext);
     }
 
     private void stopBackgroundService() {
@@ -454,10 +457,16 @@ public class BackgroundGeolocationFacade {
 
         logger.info("Attempt to stop bg service");
         mService.stop();
+
+        LocationWorkerManager.stopWorker(mContext);
     }
 
     public boolean isRunning() {
         return ((LocationServiceProxy) mService).isRunning();
+    }
+
+    public static boolean isStarted() {
+        return mIsStarted;
     }
 
     private boolean getIsStartedFlag() {

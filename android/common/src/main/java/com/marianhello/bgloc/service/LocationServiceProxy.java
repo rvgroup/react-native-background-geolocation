@@ -1,9 +1,11 @@
 package com.marianhello.bgloc.service;
 
+import android.app.BackgroundServiceStartNotAllowedException;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 
+import com.marianhello.bgloc.BackgroundGeolocationFacade;
 import com.marianhello.bgloc.Config;
 
 public class LocationServiceProxy implements LocationService, LocationServiceInfo {
@@ -125,6 +127,19 @@ public class LocationServiceProxy implements LocationService, LocationServiceInf
     }
 
     private void executeIntentCommand(Intent intent) {
-        mContext.startService(intent);
+        try {
+            mContext.startService(intent);
+        } catch (Exception ex) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (ex instanceof BackgroundServiceStartNotAllowedException) {
+                    if (BackgroundGeolocationFacade.isStarted()) {
+                        LocationWorkerManager.startWorker(mContext);
+                    }
+                    return;
+                }
+            }
+
+            ex.printStackTrace();
+        }
     }
 }
