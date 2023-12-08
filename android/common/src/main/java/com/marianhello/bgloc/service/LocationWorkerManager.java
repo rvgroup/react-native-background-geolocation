@@ -3,10 +3,8 @@ package com.marianhello.bgloc.service;
 import android.content.Context;
 
 import androidx.work.BackoffPolicy;
-import androidx.work.Constraints;
-import androidx.work.Data;
-import androidx.work.ExistingPeriodicWorkPolicy;
-import androidx.work.NetworkType;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
@@ -26,19 +24,16 @@ public class LocationWorkerManager {
                 .build();
          */
 
-        //Data.Builder data = new Data.Builder();
-        //data.putString(syncModeKey, syncMode.toString());
-
-        PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(LocationWorker.class, LOCATION_INTERVAL_MIN, TimeUnit.MINUTES)
-                //.setInputData(data.build())
+        OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(LocationWorker.class)
+                .setInitialDelay(LOCATION_INTERVAL_MIN, TimeUnit.MINUTES)
                 .addTag(LocationWorker.TAG)
                 //.setConstraints(constraints)
                 .setBackoffCriteria(BackoffPolicy.LINEAR, PeriodicWorkRequest.MIN_BACKOFF_MILLIS, TimeUnit.MILLISECONDS)
                 .build();
 
-        workManager.enqueueUniquePeriodicWork(
+        workManager.enqueueUniqueWork(
                 LocationWorker.TAG,
-                ExistingPeriodicWorkPolicy.REPLACE,
+                ExistingWorkPolicy.REPLACE,
                 request);
     }
 

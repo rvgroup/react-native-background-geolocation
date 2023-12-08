@@ -26,6 +26,7 @@ import com.marianhello.logging.LoggerManager;
 import org.json.JSONException;
 
 import java.util.Collection;
+import java.util.HashSet;
 
 public class BackgroundGeolocationModule extends ReactContextBaseJavaModule implements LifecycleEventListener, PluginDelegate {
 
@@ -47,6 +48,8 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
 
     private BackgroundGeolocationFacade facade;
     private org.slf4j.Logger logger;
+
+    private HashSet<Long> _sendLocations = new HashSet<>();
 
     public static class ErrorMap {
         public static ReadableMap from(String message, int code) {
@@ -141,6 +144,7 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
     @ReactMethod
     public void stop() {
         facade.stop();
+        _sendLocations.clear();
     }
 
     @ReactMethod
@@ -359,7 +363,13 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
 
     @Override
     public void onLocationChanged(BackgroundLocation location) {
-        sendEvent(LOCATION_EVENT, LocationMapper.toWriteableMapWithId(location));
+        long key = location.getTime();
+
+        if (!_sendLocations.contains(key)) {
+            _sendLocations.add(key);
+
+            sendEvent(LOCATION_EVENT, LocationMapper.toWriteableMapWithId(location));
+        }
     }
 
     @Override

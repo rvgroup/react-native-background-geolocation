@@ -47,6 +47,8 @@ public class LocationWorker extends ListenableWorker {
                                     }
 
                                     completer.set(Result.success());
+
+                                    LocationWorkerManager.startWorker(context);
                                 });
                     }
                 } else {
@@ -62,7 +64,7 @@ public class LocationWorker extends ListenableWorker {
     }
 
     private void postLocation(Context context, Location location) {
-        BackgroundLocation bgLocation = new BackgroundLocation(Config.DISTANCE_FILTER_PROVIDER, location);
+        BackgroundLocation bgLocation = new BackgroundLocation(Config.WORKER_PROVIDER, location);
 
         LocationServiceImpl.broadcastLocation(context, bgLocation);
     }
