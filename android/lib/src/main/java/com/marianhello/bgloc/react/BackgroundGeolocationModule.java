@@ -363,7 +363,7 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
 
     @Override
     public void onLocationChanged(BackgroundLocation location) {
-        long key = location.getTime();
+        long key = location.getTime() / 2000;
 
         if (!_sendLocations.contains(key)) {
             _sendLocations.add(key);

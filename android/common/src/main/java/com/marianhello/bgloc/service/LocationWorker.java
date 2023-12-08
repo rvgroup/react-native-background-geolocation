@@ -70,14 +70,14 @@ public class LocationWorker extends ListenableWorker {
     }
 
     private String findLocationProvider(LocationManager locationManager) {
+        if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            return LocationManager.GPS_PROVIDER;
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (locationManager.isProviderEnabled(LocationManager.FUSED_PROVIDER)) {
                 return LocationManager.FUSED_PROVIDER;
             }
-        }
-
-        if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            return LocationManager.GPS_PROVIDER;
         }
 
         if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
