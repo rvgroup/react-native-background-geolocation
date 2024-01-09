@@ -69,6 +69,7 @@ android {
     useLibrary 'android.test.base'
     useLibrary 'android.test.mock'
 
+    namespace "com.marianhello.backgroundgeolocation"
     defaultConfig {
         resValue "string", resourcePrefix + "account_name", 'Locations'
         resValue "string", resourcePrefix + "account_type", accountPrefix + '.account'
