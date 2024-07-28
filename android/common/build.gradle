@@ -105,8 +105,8 @@ dependencies {
     //DEBUG
     // implementation 'io.github.nishkarsh:android-permissions:0.1.7'
 
-    implementation 'androidx.work:work-runtime:2.8.1'
-    implementation 'androidx.concurrent:concurrent-futures:1.1.0'
+    implementation 'androidx.work:work-runtime:2.9.0'
+    implementation 'androidx.concurrent:concurrent-futures:1.2.0'
 
     implementation fileTree(include: ['*.jar'], dir: 'libs')
 }

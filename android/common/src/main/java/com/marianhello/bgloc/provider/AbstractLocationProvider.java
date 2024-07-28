@@ -15,6 +15,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
 import android.media.AudioManager;
+import android.os.Build;
 import android.provider.Settings;
 import android.widget.Toast;
 
@@ -77,7 +78,11 @@ public abstract class AbstractLocationProvider implements LocationProvider {
      * @param receiver
      */
     protected Intent registerReceiver (BroadcastReceiver receiver, IntentFilter filter) {
-        return mContext.registerReceiver(receiver, filter);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return mContext.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
+        } else {
+            return mContext.registerReceiver(receiver, filter);
+        }
     }
 
     /**

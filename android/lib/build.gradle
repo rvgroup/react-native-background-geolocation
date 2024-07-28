@@ -97,5 +97,6 @@ dependencies {
     }
 
     // DEBUG
-    implementation("com.facebook.react:react-android:0.72.6")
+    implementation('com.facebook.react:react-android:0.74.3')
+    implementation 'androidx.test.ext:junit:1.2.1'
 }
