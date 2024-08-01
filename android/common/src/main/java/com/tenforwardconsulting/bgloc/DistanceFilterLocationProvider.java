@@ -91,7 +91,7 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
         registerReceiver(stationaryAlarmReceiver, new IntentFilter(STATIONARY_ALARM_ACTION));
 
         // Stationary region PI
-        stationaryRegionPI = PendingIntent.getBroadcast(mContext, 0, new Intent(STATIONARY_REGION_ACTION), getMuttableIntentFlag(PendingIntent.FLAG_CANCEL_CURRENT));
+        stationaryRegionPI = PendingIntent.getBroadcast(mContext, 0, new Intent(STATIONARY_REGION_ACTION), getMuttableIntentFlag(0));
         registerReceiver(stationaryRegionReceiver, new IntentFilter(STATIONARY_REGION_ACTION));
 
         // Stationary location monitor PI
@@ -371,7 +371,7 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
                     location.getLatitude(),
                     location.getLongitude(),
                     proximityRadius,
-                    (long)-1,
+                    -1,
                     stationaryRegionPI
             );
 
