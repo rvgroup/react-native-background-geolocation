@@ -97,6 +97,8 @@ dependencies {
     }
 
     // DEBUG
-    implementation('com.facebook.react:react-android:0.74.3')
+    implementation('com.facebook.react:react-android:0.72.15')
     implementation 'androidx.test.ext:junit:1.2.1'
 }
+
+//task testClasses {}
