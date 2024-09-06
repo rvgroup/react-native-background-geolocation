@@ -35,18 +35,6 @@ def projDependencies = [
 
     // DEBUG
     //[configuration: "implementation", dependency: libs.reactNative],
-
-    [configuration: "testImplementation", dependency: testLibs.testRunner],
-    [configuration: "testImplementation", dependency: testLibs.testRules],
-    [configuration: "testImplementation", dependency: testLibs.junit],
-    [configuration: "testImplementation", dependency: testLibs.powermockMockito],
-    [configuration: "testImplementation", dependency: testLibs.powermockjUnit],
-    [configuration: "testImplementation", dependency: testLibs.powermockClassloading],
-    [configuration: "testImplementation", dependency: testLibs.mockitoCore],
-    [configuration: "testImplementation", dependency: testLibs.festAssertCore],
-    [configuration: "testImplementation", dependency: testLibs.robolectric],
-    [configuration: "androidTestImplementation", dependency: testLibs.testRunner],
-    [configuration: "androidTestImplementation", dependency: testLibs.testRules],
 ]
 
 repositories {
@@ -67,12 +55,8 @@ android {
 
     // Tip: https://stackoverflow.com/questions/39987669/renamingdelegatingcontext-is-deprecated-how-do-we-test-sqlite-db-now/52170737#52170737
     // Gradle automatically adds 'android.test.runner' as a dependency.
-    useLibrary 'android.test.runner'
-    useLibrary 'android.test.base'
-    useLibrary 'android.test.mock'
 
     defaultConfig {
-        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         minSdkVersion project.ext.getMinSdkVersion()
         targetSdkVersion project.ext.getTargetSdkVersion()
         versionCode 1 // intentionally not updating version as we're not uploading to any java repository
@@ -98,7 +82,6 @@ dependencies {
 
     // DEBUG
     implementation('com.facebook.react:react-android:0.72.15')
-    implementation 'androidx.test.ext:junit:1.2.1'
 }
 
 //task testClasses {}
