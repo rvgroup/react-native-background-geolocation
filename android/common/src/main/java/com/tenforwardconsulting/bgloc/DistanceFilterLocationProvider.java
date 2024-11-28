@@ -539,8 +539,14 @@ public class DistanceFilterLocationProvider extends AbstractLocationProvider imp
         logger.info("Destroying DistanceFilterLocationProvider");
 
         this.onStop();
-        alarmManager.cancel(stationaryAlarmPI);
-        alarmManager.cancel(stationaryLocationPollingPI);
+
+        if (alarmManager != null && stationaryAlarmPI != null) {
+            alarmManager.cancel(stationaryAlarmPI);
+        }
+
+        if (alarmManager != null && stationaryLocationPollingPI != null) {
+            alarmManager.cancel(stationaryLocationPollingPI);
+        }
 
         unregisterReceiver(stationaryAlarmReceiver);
         unregisterReceiver(singleUpdateReceiver);
