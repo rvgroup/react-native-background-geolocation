@@ -194,41 +194,46 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
         try {
             mSyncAccount = AccountHelper.CreateSyncAccount(this, mResolver.getAccountName(),
                     mResolver.getAccountType());
-
-            String authority = mResolver.getAuthority();
-            ContentResolver.setIsSyncable(mSyncAccount, authority, 1);
-            ContentResolver.setSyncAutomatically(mSyncAccount, authority, true);
-
-            mLocationDAO = DAOFactory.createLocationDAO(this);
-
-            mPostLocationTask = new PostLocationTask(mLocationDAO,
-                    new PostLocationTask.PostLocationTaskListener() {
-                        @Override
-                        public void onRequestedAbortUpdates() {
-                            handleRequestedAbortUpdates();
-                        }
-
-                        @Override
-                        public void onHttpAuthorizationUpdates() {
-                            handleHttpAuthorizationUpdates();
-                        }
-
-                        @Override
-                        public void onSyncRequested() {
-                            SyncService.sync(mSyncAccount, mResolver.getAuthority(), false);
-                        }
-                    }, new ConnectivityListener() {
-                @Override
-                public boolean hasConnectivity() {
-                    return isNetworkAvailable();
-                }
-            });
-
-            registerReceiver(connectivityChangeReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
-            NotificationHelper.registerServiceChannel(this);
         } catch (Exception ex) {
             logger.error("LocationServiceImpl.onCreate:" + ex.getMessage(), ex);
         }
+
+        String authority = mResolver.getAuthority();
+
+        if (mSyncAccount != null) {
+            ContentResolver.setIsSyncable(mSyncAccount, authority, 1);
+            ContentResolver.setSyncAutomatically(mSyncAccount, authority, true);
+        }
+
+        mLocationDAO = DAOFactory.createLocationDAO(this);
+
+        mPostLocationTask = new PostLocationTask(mLocationDAO,
+                new PostLocationTask.PostLocationTaskListener() {
+                    @Override
+                    public void onRequestedAbortUpdates() {
+                        handleRequestedAbortUpdates();
+                    }
+
+                    @Override
+                    public void onHttpAuthorizationUpdates() {
+                        handleHttpAuthorizationUpdates();
+                    }
+
+                    @Override
+                    public void onSyncRequested() {
+                        if (mSyncAccount != null) {
+                            SyncService.sync(mSyncAccount, mResolver.getAuthority(), false);
+                        }
+                    }
+                }, new ConnectivityListener() {
+            @Override
+            public boolean hasConnectivity() {
+                return isNetworkAvailable();
+            }
+        });
+
+        registerReceiver(connectivityChangeReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+        NotificationHelper.registerServiceChannel(this);
     }
 
     @Override
