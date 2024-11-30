@@ -19,6 +19,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ServiceInfo;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Binder;
@@ -428,7 +429,12 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
             }
 
             try {
-                super.startForeground(NOTIFICATION_ID, notification);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    super.startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+                } else {
+                    super.startForeground(NOTIFICATION_ID, notification);
+                }
+
                 mIsInForeground = true;
             } catch (Exception ex) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
