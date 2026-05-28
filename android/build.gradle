@@ -21,10 +21,17 @@ allprojects {
         maven { url 'https://maven.google.com' }
         mavenCentral()
     }
+
+    configurations.all {
+        resolutionStrategy {
+            // Force consistent slf4j version to avoid conflicts
+            force 'org.slf4j:slf4j-api:1.7.36'
+        }
+    }
 }
 
 ext {
-    reactNativeLibVersion = "0.72.6"
+    reactNativeLibVersion = "0.83.0"
 }
 
 task clean(type: Delete) {
