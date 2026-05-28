@@ -87,10 +87,11 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
 
     public BackgroundGeolocationModule(ReactApplicationContext reactContext) {
         super(reactContext);
-        reactContext.addLifecycleEventListener(this);
 
         facade = new BackgroundGeolocationFacade(getContext(), this);
         logger = LoggerManager.getLogger(BackgroundGeolocationModule.class);
+
+        reactContext.addLifecycleEventListener(this);
     }
 
     @Override
