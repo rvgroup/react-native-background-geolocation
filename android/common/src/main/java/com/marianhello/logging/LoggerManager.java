@@ -17,32 +17,42 @@ import ch.qos.logback.core.util.StatusPrinter;
 public class LoggerManager {
 
     public static final String SQLITE_APPENDER_NAME = "sqlite";
+    private static volatile boolean sInitialized = false;
 
     static {
-        // reset the default context (which may already have been initialized)
-        // since we want to reconfigure it
-        LoggerContext context = (LoggerContext) org.slf4j.LoggerFactory.getILoggerFactory();
-        context.reset();
-        // Disable class packaging data
-        // @see https://github.com/tony19/logback-android/issues/171
-        context.setPackagingDataEnabled(false);
+        try {
+            // reset the default context (which may already have been initialized)
+            // since we want to reconfigure it
+            LoggerContext context = (LoggerContext) org.slf4j.LoggerFactory.getILoggerFactory();
+            context.reset();
+            // Disable class packaging data
+            // @see https://github.com/tony19/logback-android/issues/171
+            context.setPackagingDataEnabled(false);
 
-        PatternLayoutEncoder encoder = new PatternLayoutEncoder();
-        encoder.setContext(context);
-        encoder.setPattern("%msg");
-        encoder.start();
+            PatternLayoutEncoder encoder = new PatternLayoutEncoder();
+            encoder.setContext(context);
+            encoder.setPattern("%msg");
+            encoder.start();
 
-        LogcatAppender logcatAppender = new LogcatAppender();
-        logcatAppender.setContext(context);
-        logcatAppender.setEncoder(encoder);
-        logcatAppender.start();
+            LogcatAppender logcatAppender = new LogcatAppender();
+            logcatAppender.setContext(context);
+            logcatAppender.setEncoder(encoder);
+            logcatAppender.start();
 
-        ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-        root.setLevel(Level.TRACE);
-        root.addAppender(logcatAppender);
+            ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+            root.setLevel(Level.TRACE);
+            root.addAppender(logcatAppender);
+
+            sInitialized = true;
+        } catch (Throwable e) {
+            // Static initialization failed - logging will be disabled
+            // This can happen in React Native 0.83+ due to classloader changes
+            sInitialized = false;
+        }
     }
 
     public static void enableDBLogging() {
+        if (!sInitialized) return;
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         if (root.getAppender(SQLITE_APPENDER_NAME) == null) {
             LoggerContext context = (LoggerContext) org.slf4j.LoggerFactory.getILoggerFactory();
@@ -56,6 +66,7 @@ public class LoggerManager {
     }
 
     public static void disableDBLogging() {
+        if (!sInitialized) return;
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         Appender<ILoggingEvent> appender = root.getAppender(SQLITE_APPENDER_NAME);
         if (appender != null) {
@@ -65,10 +76,15 @@ public class LoggerManager {
     }
 
     public static org.slf4j.Logger getLogger(Class forClass) {
-        //return org.slf4j.LoggerFactory.getLogger(forClass);
+        // If initialization failed, return no-op logger immediately
+        if (!sInitialized) {
+            return new NoOpLogger();
+        }
 
         try {
-            return org.slf4j.LoggerFactory.getLogger(forClass);
+            org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(forClass);
+            // Defensive null check - should never happen but protects against NPE
+            return logger != null ? logger : new NoOpLogger();
         } catch (Throwable e) {
             // Return no-op logger as fallback
             return new NoOpLogger();
