@@ -17,4 +17,5 @@ Pod::Spec.new do |s|
   s.exclude_files = "ios/common/BackgroundGeolocationTests/*.{h,m}"
 
   s.dependency 'React'
+  s.dependency 'react-native-sqlite-storage'
 end
