@@ -16,5 +16,6 @@ Pod::Spec.new do |s|
   s.source_files  = "ios/**/*.{h,m}"
   s.exclude_files = "ios/common/BackgroundGeolocationTests/*.{h,m}"
 
+  s.library = 'sqlite3'
   s.dependency 'React'
 end
