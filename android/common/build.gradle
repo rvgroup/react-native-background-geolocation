@@ -28,6 +28,10 @@ android {
     // Gradle automatically adds 'android.test.runner' as a dependency.
 
     namespace "com.marianhello.backgroundgeolocation"
+    buildFeatures {
+        resValues = true
+    }
+
     sourceSets {
         main {
             java.srcDir 'vendor/android-permissions/src/main/java'
@@ -49,7 +53,7 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 
