@@ -26,7 +26,11 @@ import com.marianhello.logging.LoggerManager;
 import org.json.JSONException;
 
 import java.util.Collection;
-import java.util.HashSet;
+import com.marianhello.utils.RecentLocationKeys;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.RejectedExecutionException;
 
 public class BackgroundGeolocationModule extends ReactContextBaseJavaModule implements LifecycleEventListener, PluginDelegate {
 
@@ -49,7 +53,14 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
     private BackgroundGeolocationFacade facade;
     private org.slf4j.Logger logger;
 
-    private HashSet<Long> _sendLocations = new HashSet<>();
+    private final RecentLocationKeys _sendLocations = new RecentLocationKeys(2048);
+    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(
+            2, 2, 30, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(64),
+            runnable -> new Thread(runnable, "bgloc-native-task"));
+    private final ThreadPoolExecutor locationExecutor = new ThreadPoolExecutor(
+            0, 4, 30, TimeUnit.SECONDS, new java.util.concurrent.SynchronousQueue<Runnable>(),
+            runnable -> new Thread(runnable, "bgloc-location-await"));
+    private volatile boolean invalidated;
 
     public static class ErrorMap {
         public static ReadableMap from(String message, int code) {
@@ -105,6 +116,7 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
      */
     @Override
     public void onHostResume() {
+        if (invalidated) return;
         logger.info("App will be resumed");
         facade.resume();
         sendEvent(FOREGROUND_EVENT, null);
@@ -115,6 +127,7 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
      */
     @Override
     public void onHostPause() {
+        if (invalidated) return;
         logger.info("App will be paused");
         facade.pause();
         sendEvent(BACKGROUND_EVENT, null);
@@ -126,16 +139,49 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
      */
     @Override
     public void onHostDestroy() {
+        if (invalidated) return;
         logger.info("Destroying plugin");
         facade.destroy();
 //        facade = null;
     }
 
-    private void runOnBackgroundThread(Runnable runnable) {
-        // currently react-native has no other thread we can run on
-        new Thread(runnable).start();
+    @Override
+    public void invalidate() {
+        invalidated = true;
+        getReactApplicationContext().removeLifecycleEventListener(this);
+        executor.shutdownNow();
+        locationExecutor.shutdownNow();
+        facade.destroy();
+        _sendLocations.clear();
+        super.invalidate();
     }
 
+    private void runOnBackgroundThread(Runnable runnable, Callback error) {
+        runOnBackgroundThread(executor, runnable, error);
+    }
+
+    private void runOnBackgroundThread(ThreadPoolExecutor pool, Runnable runnable, Callback error) {
+        if (invalidated) return;
+        try {
+            pool.execute(() -> {
+                if (invalidated) return;
+                try {
+                    runnable.run();
+                } catch (Exception e) {
+                    if (!invalidated && getReactApplicationContext().hasActiveReactInstance()) {
+                        invokeCallback(error, ErrorMap.from(e.getMessage(), e, PluginException.SERVICE_ERROR));
+                    }
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            if (!invalidated) invokeCallback(error, ErrorMap.from("Too many pending geolocation operations", e,
+                    PluginException.SERVICE_ERROR));
+        }
+    }
+
+    private void invokeCallback(Callback callback, Object... args) {
+        if (!invalidated && getReactApplicationContext().hasActiveReactInstance()) callback.invoke(args);
+    }
 
     @ReactMethod
     public void start() {
@@ -161,16 +207,16 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
                 try {
                     Config config = ConfigMapper.fromMap(options);
                     facade.configure(config);
-                    success.invoke(true);
+                    invokeCallback(success, true);
                 } catch (JSONException e) {
                     logger.error("Configuration error: {}", e.getMessage());
-                    error.invoke(ErrorMap.from("Configuration error", e, PluginException.CONFIGURE_ERROR));
+                    invokeCallback(error, ErrorMap.from("Configuration error", e, PluginException.CONFIGURE_ERROR));
                 } catch (PluginException e) {
                     logger.error("Configuration error: {}", e.getMessage());
-                    error.invoke(ErrorMap.from(e));
+                    invokeCallback(error, ErrorMap.from(e));
                 }
             }
-        });
+        }, error);
     }
 
     @ReactMethod
@@ -187,9 +233,9 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
     public void getStationaryLocation(Callback success, Callback error) {
         BackgroundLocation stationaryLocation = facade.getStationaryLocation();
         if (stationaryLocation != null) {
-            success.invoke(LocationMapper.toWriteableMap(stationaryLocation));
+            invokeCallback(success, LocationMapper.toWriteableMap(stationaryLocation));
         } else {
-            success.invoke();
+            invokeCallback(success);
         }
     }
 
@@ -202,9 +248,9 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
                 for (BackgroundLocation location : locations) {
                     locationsArray.pushMap(LocationMapper.toWriteableMapWithId(location));
                 }
-                success.invoke(locationsArray);
+                invokeCallback(success, locationsArray);
             }
-        });
+        }, error);
     }
 
     @ReactMethod
@@ -216,9 +262,9 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
                 for (BackgroundLocation location : locations) {
                     locationsArray.pushMap(LocationMapper.toWriteableMapWithId(location));
                 }
-                success.invoke(locationsArray);
+                invokeCallback(success, locationsArray);
             }
-        });
+        }, error);
     }
 
     @ReactMethod
@@ -226,9 +272,9 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
         runOnBackgroundThread(new Runnable() {
             public void run() {
                 facade.deleteLocation(locationId.longValue());
-                success.invoke(true);
+                invokeCallback(success, true);
             }
-        });
+        }, error);
     }
 
     @ReactMethod
@@ -236,14 +282,14 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
         runOnBackgroundThread(new Runnable() {
             public void run() {
                 facade.deleteAllLocations();
-                success.invoke(true);
+                invokeCallback(success, true);
             }
-        });
+        }, error);
     }
 
     @ReactMethod
     public void getCurrentLocation(final ReadableMap options, final Callback success, final Callback error) {
-      runOnBackgroundThread(new Runnable() {
+      runOnBackgroundThread(locationExecutor, new Runnable() {
         public void run() {
           try {
               int timeout = options.hasKey("timeout") ? options.getInt("timeout") : Integer.MAX_VALUE;
@@ -251,12 +297,12 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
               boolean enableHighAccuracy = options.hasKey("enableHighAccuracy") && options.getBoolean("enableHighAccuracy");
 
               BackgroundLocation location = facade.getCurrentLocation(timeout, maximumAge, enableHighAccuracy);
-              success.invoke(LocationMapper.toWriteableMap(location));
+               invokeCallback(success, LocationMapper.toWriteableMap(location));
           } catch (PluginException e) {
-              error.invoke(ErrorMap.from(e));
+               invokeCallback(error, ErrorMap.from(e));
           }
         }
-      });
+      }, error);
     }
 
     @ReactMethod
@@ -265,9 +311,9 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
             public void run() {
                 Config config = facade.getConfig();
                 ReadableMap out = ConfigMapper.toMap(config);
-                success.invoke(out);
+                invokeCallback(success, out);
             }
-        });
+        }, error);
     }
 
     @ReactMethod
@@ -290,9 +336,9 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
 
                     logEntriesArray.pushMap(out);
                 }
-                success.invoke(logEntriesArray);
+                invokeCallback(success, logEntriesArray);
             }
-        });
+        }, error);
     }
 
     @ReactMethod
@@ -305,29 +351,30 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
                     out.putBoolean("hasPermissions", facade.hasPermissions()); //@Deprecated
                     out.putBoolean("locationServicesEnabled", facade.locationServicesEnabled());
                     out.putInt("authorization", getAuthorizationStatus());
-                    success.invoke(out);
+                    invokeCallback(success, out);
                 } catch (PluginException e) {
                     logger.error("Location service checked failed: {}", e.getMessage());
-                    error.invoke(ErrorMap.from(e));
+                    invokeCallback(error, ErrorMap.from(e));
                 }
             }
-        });
+        }, error);
     }
 
     @ReactMethod
     public void registerHeadlessTask(Callback success, Callback error) {
         logger.debug("Registering headless task");
         facade.registerHeadlessTask(HeadlessTaskRunner.class.getName());
-        success.invoke();
+        invokeCallback(success);
     }
 
     @ReactMethod
     public void forceSync(Callback success, Callback error) {
         facade.forceSync();
-        success.invoke();
+        invokeCallback(success);
     }
 
     private void sendEvent(String eventName, Object params) {
+        if (invalidated || !getReactApplicationContext().hasActiveReactInstance()) return;
         getReactApplicationContext()
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
                 .emit(eventName, params);
@@ -366,9 +413,7 @@ public class BackgroundGeolocationModule extends ReactContextBaseJavaModule impl
     public void onLocationChanged(BackgroundLocation location) {
         long key = location.getTime() / 2000;
 
-        if (!_sendLocations.contains(key)) {
-            _sendLocations.add(key);
-
+        if (_sendLocations.add(key)) {
             sendEvent(LOCATION_EVENT, LocationMapper.toWriteableMapWithId(location));
         }
     }

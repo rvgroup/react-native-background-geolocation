@@ -50,7 +50,7 @@ public class ActivityRecognitionLocationProvider extends AbstractLocationProvide
     public void onCreate() {
         super.onCreate();
 
-        Intent detectedActivitiesIntent = new Intent(DETECTED_ACTIVITY_UPDATE);
+        Intent detectedActivitiesIntent = new Intent(DETECTED_ACTIVITY_UPDATE).setPackage(mContext.getPackageName());
         detectedActivitiesPI = PendingIntent.getBroadcast(mContext, 9002, detectedActivitiesIntent, getMuttableIntentFlag(PendingIntent.FLAG_UPDATE_CURRENT));
         registerReceiver(detectedActivitiesReceiver, new IntentFilter(DETECTED_ACTIVITY_UPDATE));
     }

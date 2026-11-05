@@ -35,7 +35,7 @@ class PermissionHandler {
         this.appStatus = appStatus;
     }
 
-    void checkPermissions(Collection<String> permissions, PermissionManager.PermissionRequestListener listener) {
+    synchronized void checkPermissions(Collection<String> permissions, PermissionManager.PermissionRequestListener listener) {
         Set<String> permissionsToRequest = filterGrantedPermissions(permissions);
 
         if (permissionsToRequest.isEmpty()) {
@@ -50,19 +50,18 @@ class PermissionHandler {
         }
     }
 
-    void onPermissionsResult(String[] grantedPermissions, String[] deniedPermissions) {
-        informPermissionsDenied(deniedPermissions);
-        informPermissionsGranted(grantedPermissions);
-
+    synchronized void onPermissionsResult(String[] grantedPermissions, String[] deniedPermissions) {
         pendingPermissionRequests.removeAll(asList(grantedPermissions));
         pendingPermissionRequests.removeAll(asList(deniedPermissions));
         if (pendingPermissionRequests.isEmpty()) {
             manager.unregisterBroadcastReceiver();
         }
+        // Update pending state before callbacks: a callback may request again.
+        informListeners(grantedPermissions, deniedPermissions);
     }
 
     @VisibleForTesting
-    void requestPermissions(Set<String> permissions) {
+    synchronized void requestPermissions(Set<String> permissions) {
         logger.i("No pending foreground permission request for " + permissions + ", asking.");
 
         pendingPermissionRequests.addAll(permissions);
@@ -75,49 +74,33 @@ class PermissionHandler {
         }
     }
 
-    void invalidatePendingPermissionRequests(Collection<String> permissions) {
+    synchronized void invalidatePendingPermissionRequests(Collection<String> permissions) {
         pendingPermissionRequests.removeAll(permissions);
-        informPermissionsDenied(permissions.toArray(new String[permissions.size()]));
 
         if (pendingPermissionRequests.isEmpty()) {
             manager.unregisterBroadcastReceiver();
         }
+        informListeners(new String[0], permissions.toArray(new String[permissions.size()]));
     }
 
-    private void informPermissionsDenied(String[] deniedPermissions) {
-        ArrayList<PermissionManager.PermissionRequestListener> invalidatedListeners = new ArrayList<>();
-
-        for (String deniedPermission : deniedPermissions) {
-            for (PermissionManager.PermissionRequestListener listener : requiredPermissionsMap.keySet()) {
-                Set permissionSet = requiredPermissionsMap.get(listener);
-                if (permissionSet.contains(deniedPermission)) {
-                    listener.onPermissionDenied();
-                    invalidatedListeners.add(listener);
-                }
-            }
-
-            for (PermissionManager.PermissionRequestListener listener : invalidatedListeners) {
-                requiredPermissionsMap.remove(listener);
-            }
-            invalidatedListeners.clear();
-        }
-    }
-
-    private void informPermissionsGranted(String[] grantedPermissions) {
-        ArrayList<PermissionManager.PermissionRequestListener> invalidatedListeners = new ArrayList<>();
-
+    private void informListeners(String[] grantedPermissions, String[] deniedPermissions) {
+        ArrayList<PermissionManager.PermissionRequestListener> granted = new ArrayList<>();
+        ArrayList<PermissionManager.PermissionRequestListener> denied = new ArrayList<>();
         for (PermissionManager.PermissionRequestListener listener : requiredPermissionsMap.keySet()) {
             Set permissionSet = requiredPermissionsMap.get(listener);
-            permissionSet.removeAll(asList(grantedPermissions));
-            if (permissionSet.isEmpty()) {
-                listener.onPermissionGranted();
-                invalidatedListeners.add(listener);
+            if (!java.util.Collections.disjoint(permissionSet, asList(deniedPermissions))) {
+                denied.add(listener);
+            } else {
+                permissionSet.removeAll(asList(grantedPermissions));
+                if (permissionSet.isEmpty()) granted.add(listener);
             }
         }
-
-        for (PermissionManager.PermissionRequestListener listener : invalidatedListeners) {
-            requiredPermissionsMap.remove(listener);
-        }
+        // Remove the whole completed batch before invoking user code. Reentrant
+        // requests then belong to the next batch, even when reusing a listener.
+        for (PermissionManager.PermissionRequestListener listener : denied) requiredPermissionsMap.remove(listener);
+        for (PermissionManager.PermissionRequestListener listener : granted) requiredPermissionsMap.remove(listener);
+        for (PermissionManager.PermissionRequestListener listener : denied) listener.onPermissionDenied();
+        for (PermissionManager.PermissionRequestListener listener : granted) listener.onPermissionGranted();
     }
 
     private void registerForBroadcastIfNeeded(String action) {

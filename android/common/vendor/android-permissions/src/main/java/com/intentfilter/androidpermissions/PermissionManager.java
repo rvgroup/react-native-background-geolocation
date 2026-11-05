@@ -6,6 +6,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Handler;
+import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -38,7 +40,7 @@ public class PermissionManager extends BroadcastReceiver {
         this.logger = Logger.loggerFor(PermissionManager.class);
     }
 
-    public static PermissionManager getInstance(Context context) {
+    public static synchronized PermissionManager getInstance(Context context) {
         if (permissionManager == null) {
             permissionManager = new PermissionManager(context.getApplicationContext());
         }
@@ -46,7 +48,12 @@ public class PermissionManager extends BroadcastReceiver {
     }
 
     public void checkPermissions(@NonNull Collection<String> permissions, @NonNull final PermissionRequestListener listener) {
-        permissionHandler.checkPermissions(permissions, listener);
+        Collection<String> requested = new java.util.ArrayList<>(permissions);
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            permissionHandler.checkPermissions(requested, listener);
+        } else {
+            new Handler(Looper.getMainLooper()).post(() -> permissionHandler.checkPermissions(requested, listener));
+        }
     }
 
     @Override

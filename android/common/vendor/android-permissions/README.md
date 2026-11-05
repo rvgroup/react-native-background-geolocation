@@ -30,7 +30,9 @@ Changes from the pinned upstream sources:
   the background permission-notification path on current Android versions.
 - PermissionHandler regression tests cover callbacks, concurrent callers,
   partially granted permissions, denial/retry, interruption and notification
-  routing. The queue/callback algorithm is unchanged.
+  routing. Subsequent reliability fixes serialize permission entry on the main
+  thread and remove completed requests before callbacks, allowing a callback to
+  request permissions again without corrupting the pending queue.
 
 Runtime notification permission on Android 13+ and background-location/foreground
 service requirements remain the responsibility of the host application, just as

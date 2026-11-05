@@ -147,4 +147,18 @@ public class PermissionHandlerTest {
         verify(manager, times(2)).showPermissionNotification(new HashSet<>(LOCATION),
                 R.string.title_permission_required, R.string.message_permission_required);
     }
+
+    @Test public void denialCallbackCanImmediatelyRequestAgain() {
+        when(appStatus.isInForeground()).thenReturn(true);
+        doAnswer(invocation -> {
+            handler.checkPermissions(LOCATION, listener);
+            return null;
+        }).when(listener).onPermissionDenied();
+        handler.checkPermissions(LOCATION, listener);
+        handler.onPermissionsResult(new String[]{}, new String[]{COARSE, FINE});
+        verify(listener).onPermissionDenied();
+        verify(manager, times(2)).startPermissionActivity(new HashSet<>(LOCATION));
+        handler.onPermissionsResult(new String[]{COARSE, FINE}, new String[]{});
+        verify(listener).onPermissionGranted();
+    }
 }
