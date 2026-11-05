@@ -12,7 +12,7 @@ def projDependencies = [
 ]
 
 repositories {
-    maven { url 'https://maven.google.com' }
+    google()
     mavenCentral()
 }
 
@@ -48,8 +48,9 @@ dependencies {
         add(it.configuration, it.dependency)
     }
 
-    // DEBUG
-    implementation('com.facebook.react:react-android:0.72.15')
+    // A React Native host may select its version through the RN Gradle plugin.
+    // Standalone builds use the pinned default or root reactNativeLibVersion.
+    implementation "com.facebook.react:react-android:${getReactNativeLibVersion()}"
 }
 
 //task testClasses {}

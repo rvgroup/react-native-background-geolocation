@@ -129,10 +129,10 @@ When ext is not provided then following defaults will be used:
 
 ```
 ext {
-  compileSdkVersion = 34
-  buildToolsVersion = "34.0.0"
-  targetSdkVersion = 34
-  minSdkVersion = 21
+  compileSdkVersion = 37
+  targetSdkVersion = 36
+  minSdkVersion = 24
+  reactNativeLibVersion = "0.87.1"
   googlePlayServicesVersion = "17.0.0"
 }
 ```
@@ -140,6 +140,10 @@ ext {
 The Android implementation uses AndroidX directly and does not require Jetifier.
 The common module declares its own core, appcompat and localbroadcastmanager
 dependencies. See [AndroidX migration and verification](android/ANDROIDX.md).
+
+The standalone build uses JDK 17, Gradle 8.13 and AGP 8.13.2; AGP selects Build
+Tools automatically. The default minimum Android version is now API 24.
+See [Android reliability changes and verification scope](android/MODERNIZATION.md).
 
 ## Compatibility
 
@@ -152,6 +156,10 @@ compatible with this module.
 | 0.1.0 - 0.2.0    | 0.33              |
 | >=0.3.0          | >=0.47            |
 | >=0.6.0          | >=0.60            |
+
+This table describes historical upstream releases. The current fork is build-tested
+against React Android 0.87.1; this does not establish runtime compatibility with
+every intervening RN release or verify New Architecture behavior.
 
 If you are using an older version of React Native with this module some features may be buggy.
 

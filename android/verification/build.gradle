@@ -12,14 +12,12 @@ ext {
     minSdkVersion = 24
     compileSdkVersion = 37
     targetSdkVersion = 36
+    reactNativeLibVersion = '0.87.1'
 }
 
 allprojects {
     repositories {
         google()
         mavenCentral()
-    }
-    configurations.configureEach {
-        resolutionStrategy.force 'com.facebook.react:react-android:0.87.1'
     }
 }
