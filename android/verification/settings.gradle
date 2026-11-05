@@ -1,0 +1,12 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'geolocation-androidx-verification'
+include ':app', ':lib', ':@thekingzoom_react-native-background-geolocation-common'
+project(':lib').projectDir = file('../lib')
+project(':@thekingzoom_react-native-background-geolocation-common').projectDir = file('../common')

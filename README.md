@@ -129,14 +129,17 @@ When ext is not provided then following defaults will be used:
 
 ```
 ext {
-  compileSdkVersion = 28
-  buildToolsVersion = "28.0.3"
-  targetSdkVersion = 28
-  minSdkVersion = 16
-  supportLibVersion = "28.0.0"
-  googlePlayServicesVersion = "11+"
+  compileSdkVersion = 34
+  buildToolsVersion = "34.0.0"
+  targetSdkVersion = 34
+  minSdkVersion = 21
+  googlePlayServicesVersion = "17.0.0"
 }
 ```
+
+The Android implementation uses AndroidX directly and does not require Jetifier.
+The common module declares its own core, appcompat and localbroadcastmanager
+dependencies. See [AndroidX migration and verification](android/ANDROIDX.md).
 
 ## Compatibility
 
@@ -152,12 +155,14 @@ compatible with this module.
 
 If you are using an older version of React Native with this module some features may be buggy.
 
-If you are using `react-native-maps` or another lib that requires `Google Play Services` such as `Exponent.js`, then in addition to the instalation steps described here, you must set `Google Play Services` library version to match the version used by those libraries. (in this case `9.8.0`)
+If another library requires a different Google Play Services Location version,
+use a concrete AndroidX-compatible version that retains the legacy GoogleApiClient
+location APIs used by this module. Do not downgrade to pre-AndroidX releases.
 
 Add following to `android/build.gradle`
 ```
 ext {
-  googlePlayServicesVersion = "9.8.0"
+  googlePlayServicesVersion = "17.0.0"
 }
 ```
 

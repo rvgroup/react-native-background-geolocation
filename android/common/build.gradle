@@ -7,11 +7,9 @@ def resourcePrefix = getResourcePrefix()
 // https://hackernoon.com/android-how-to-add-gradle-dependencies-using-foreach-c4cbcc070458
 def projDependencies = [
     [configuration: "implementation", dependency: androidLibs.playServicesLocation],
-    [configuration: "implementation", dependency: androidLibs.supportCompat],
+    [configuration: "implementation", dependency: androidLibs.core],
     [configuration: "implementation", dependency: androidLibs.appcompat],
-
-    // DEBUG
-    //[configuration: "implementation", dependency: libs.permissions, options: { exclude group: 'com.android.support', module: 'appcompat-v7'}],
+    [configuration: "implementation", dependency: androidLibs.localBroadcastManager],
 
     [configuration: "implementation", dependency: libs.logback],
     [configuration: "implementation", dependency: libs.slf4j],
@@ -46,6 +44,14 @@ android {
     // Gradle automatically adds 'android.test.runner' as a dependency.
 
     namespace "com.marianhello.backgroundgeolocation"
+    sourceSets {
+        main {
+            java.srcDir 'vendor/android-permissions/src/main/java'
+            res.srcDir 'vendor/android-permissions/src/main/res'
+            resources.srcDir 'vendor/android-permissions/src/main/resources'
+        }
+        test.java.srcDir 'vendor/android-permissions/src/test/java'
+    }
     defaultConfig {
         resValue "string", resourcePrefix + "account_name", 'Locations'
         resValue "string", resourcePrefix + "account_type", accountPrefix + '.account'
@@ -74,8 +80,9 @@ dependencies {
         add(it.configuration, it.dependency)
     }
 
-    //DEBUG
-     implementation 'io.github.nishkarsh:android-permissions:0.1.7'
+    // android-permissions is built from the pinned AndroidX sources in vendor/.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-core:4.11.0'
 
     implementation 'androidx.work:work-runtime:2.8.0'
     implementation 'androidx.concurrent:concurrent-futures:1.1.0'

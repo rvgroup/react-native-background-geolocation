@@ -1,0 +1,41 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'com.marianhello.bgloc.verification'
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId 'com.marianhello.bgloc.verification'
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName '1.0'
+    }
+}
+
+dependencies {
+    implementation project(':lib')
+}
+
+// Verify the complete consumer graph, including transitive dependencies.
+tasks.register('verifyAndroidXDependencies') {
+    doLast {
+        ['debugRuntimeClasspath', 'releaseRuntimeClasspath'].each { name ->
+            def configuration = configurations.getByName(name)
+            def forbidden = configuration.incoming.resolutionResult.allComponents.findAll {
+                it.moduleVersion?.group == 'com.android.support' ||
+                        it.moduleVersion?.name == 'android-permissions'
+            }
+            if (!forbidden.empty) {
+                throw new GradleException("Legacy dependencies in ${name}: ${forbidden}")
+            }
+            def output = layout.buildDirectory.file("verification/${name}.txt").get().asFile
+            output.parentFile.mkdirs()
+            def externalArtifacts = configuration.incoming.artifactView {
+                componentFilter { it instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier }
+            }.files
+            output.text = externalArtifacts.collect {
+                it.absolutePath
+            }.join('\n') + '\n'
+        }
+    }
+}
