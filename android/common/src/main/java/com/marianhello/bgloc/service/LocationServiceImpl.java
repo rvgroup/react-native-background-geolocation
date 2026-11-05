@@ -272,6 +272,7 @@ public class LocationServiceImpl extends Service implements ProviderDelegate, Lo
         Config config = getConfig();
         if (config.getStopOnTerminate()) {
             logger.info("Stopping self");
+            LocationWorkerManager.stopWorker(this);
             stopSelf();
         } else {
             logger.info("Continue running in background");

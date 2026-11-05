@@ -60,8 +60,9 @@ public class BackgroundGeolocationFacade {
 
     private boolean mServiceBroadcastReceiverRegistered = false;
     private boolean mLocationModeChangeReceiverRegistered = false;
-    private static boolean mIsPaused = false;
-    private static boolean mIsStarted = false;
+    private static volatile boolean mIsPaused = false;
+    private static volatile boolean mIsStarted = false;
+    private long mStartGeneration;
 
     private Config mConfig;
     private final Context mContext;
@@ -213,31 +214,38 @@ public class BackgroundGeolocationFacade {
         mServiceBroadcastReceiverRegistered = false;
     }
 
-    public void start() {
+    public synchronized void start() {
         logger.debug("Starting service");
+        final long generation = ++mStartGeneration;
 
         PermissionManager permissionManager = PermissionManager.getInstance(getContext());
         permissionManager.checkPermissions(Arrays.asList(PERMISSIONS), new PermissionManager.PermissionRequestListener() {
             @Override
             public void onPermissionGranted() {
-                logger.info("User granted requested permissions");
-                // watch location mode changes
-                registerLocationModeChangeReceiver();
-                registerServiceBroadcast();
-                startBackgroundService();
+                synchronized (BackgroundGeolocationFacade.this) {
+                    if (generation != mStartGeneration) return;
+                    logger.info("User granted requested permissions");
+                    registerLocationModeChangeReceiver();
+                    registerServiceBroadcast();
+                    startBackgroundService();
+                }
             }
 
             @Override
             public void onPermissionDenied() {
-                logger.info("User denied requested permissions");
-                if (mDelegate != null) {
-                    mDelegate.onAuthorizationChanged(BackgroundGeolocationFacade.AUTHORIZATION_DENIED);
+                synchronized (BackgroundGeolocationFacade.this) {
+                    if (generation != mStartGeneration) return;
+                    logger.info("User denied requested permissions");
+                    if (mDelegate != null) {
+                        mDelegate.onAuthorizationChanged(BackgroundGeolocationFacade.AUTHORIZATION_DENIED);
+                    }
                 }
             }
         });
     }
 
-    public void stop() {
+    public synchronized void stop() {
+        ++mStartGeneration;
         logger.debug("Stopping service");
         unregisterLocationModeChangeReceiver();
         // Note: we cannot unregistered service broadcast here
@@ -263,7 +271,8 @@ public class BackgroundGeolocationFacade {
         }
     }
 
-    public void destroy() {
+    public synchronized void destroy() {
+        ++mStartGeneration;
         logger.info("Destroying plugin");
 
         unregisterLocationModeChangeReceiver();
@@ -329,8 +338,9 @@ public class BackgroundGeolocationFacade {
             throw new PluginException(error.getMessage(), 2); // LOCATION_UNAVAILABLE
         } catch (InterruptedException e) {
             logger.error("Interrupted while waiting location", e);
+            locationManager.cancel(promise);
             Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while waiting location", e);
+            throw new PluginException("Interrupted while waiting location", e, 2);
         }
     }
 
@@ -445,6 +455,11 @@ public class BackgroundGeolocationFacade {
     }
 
     private void startBackgroundService() {
+        if (!getIsStartedFlag()) {
+            LocationWorkerManager.beginTracking(mContext);
+        } else {
+            LocationWorkerManager.ensureTracking(mContext);
+        }
         this.setIsStartedFlag(true);
 
         logger.info("Attempt to start bg service");
@@ -459,11 +474,11 @@ public class BackgroundGeolocationFacade {
 
     private void stopBackgroundService() {
         this.setIsStartedFlag(false);
+        LocationWorkerManager.stopWorker(mContext);
 
         logger.info("Attempt to stop bg service");
         mService.stop();
 
-        LocationWorkerManager.stopWorker(mContext);
     }
 
     public boolean isRunning() {

@@ -6,7 +6,6 @@ import android.content.Context;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
 
@@ -18,23 +17,32 @@ import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.FutureTask;
 
 public class LocationManager {
     private Context mContext;
     private static LocationManager mLocationManager;
+    private static final Executor REQUEST_EXECUTOR = new ThreadPoolExecutor(
+            0, 4, 30, TimeUnit.SECONDS, new java.util.concurrent.SynchronousQueue<Runnable>(),
+            runnable -> new Thread(runnable, "bgloc-current-location"));
+    private final ConcurrentHashMap<Promise<Location>, FutureTask<Void>> requests = new ConcurrentHashMap<>();
 
     public static final String[] PERMISSIONS = new String[]{
             Manifest.permission.ACCESS_COARSE_LOCATION,
             Manifest.permission.ACCESS_FINE_LOCATION
     };
 
-    private LocationManager(Context context) {
+    LocationManager(Context context) {
         mContext = context;
     }
 
     public class PermissionDeniedException extends Exception {}
 
-    public static LocationManager getInstance(Context context) {
+    public static synchronized LocationManager getInstance(Context context) {
         if (mLocationManager == null) {
             mLocationManager = new LocationManager(context.getApplicationContext());
         }
@@ -48,23 +56,61 @@ public class LocationManager {
         permissionManager.checkPermissions(Arrays.asList(PERMISSIONS), new PermissionManager.PermissionRequestListener() {
             @Override
             public void onPermissionGranted() {
+                // Permission results arrive on the main thread. Never wait for a
+                // location there: its LocationListener also runs on that thread.
+                if (promise.isCancelled()) return;
+                FutureTask<Void> task = new FutureTask<Void>(() -> {
+                        try {
+                            Location location = getCurrentLocationNoCheck(timeout, maximumAge, enableHighAccuracy);
+                            synchronized (promise) {
+                                if (!promise.isDone()) promise.set(location);
+                            }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            fail(promise, e);
+                        } catch (Exception e) {
+                            fail(promise, e);
+                        }
+                        return null;
+                    }) {
+                    @Override protected void done() {
+                        requests.remove(promise, this);
+                    }
+                };
+                requests.put(promise, task);
+                if (promise.isCancelled()) {
+                    task.cancel(true);
+                    return;
+                }
                 try {
-                    Location currentLocation = getCurrentLocationNoCheck(timeout, maximumAge, enableHighAccuracy);
-                    promise.set(currentLocation);
-                } catch (TimeoutException e) {
-                    promise.setError(e);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                    REQUEST_EXECUTOR.execute(task);
+                } catch (RejectedExecutionException e) {
+                    requests.remove(promise, task);
+                    fail(promise, e);
                 }
             }
 
             @Override
             public void onPermissionDenied() {
-                promise.setError(new PermissionDeniedException());
+                fail(promise, new PermissionDeniedException());
             }
         });
 
         return promise;
+    }
+
+    private static void fail(Promise<Location> promise, Exception error) {
+        synchronized (promise) {
+            if (!promise.isDone()) promise.setError(error);
+        }
+    }
+
+    public void cancel(Promise<Location> promise) {
+        synchronized (promise) {
+            if (!promise.isDone()) promise.cancel();
+        }
+        FutureTask<Void> task = requests.remove(promise);
+        if (task != null) task.cancel(true);
     }
 
     /**
@@ -79,15 +125,23 @@ public class LocationManager {
      */
     @SuppressLint("MissingPermission")
     public Location getCurrentLocationNoCheck(int timeout, long maximumAge, boolean enableHighAccuracy) throws InterruptedException, TimeoutException {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            throw new IllegalStateException("A blocking location request cannot run on the main thread");
+        }
+        if (timeout < 0 || maximumAge < 0) {
+            throw new IllegalArgumentException("timeout and maximumAge must be non-negative");
+        }
         final long minLocationTime = System.currentTimeMillis() - maximumAge;
         final android.location.LocationManager locationManager = (android.location.LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
 
-        Location lastKnownGPSLocation = locationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER);
+        Location lastKnownGPSLocation = locationManager.getAllProviders().contains(android.location.LocationManager.GPS_PROVIDER)
+                ? locationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER) : null;
         if (lastKnownGPSLocation != null && lastKnownGPSLocation.getTime() >= minLocationTime) {
             return lastKnownGPSLocation;
         }
 
-        Location lastKnownNetworkLocation = locationManager.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER);
+        Location lastKnownNetworkLocation = locationManager.getAllProviders().contains(android.location.LocationManager.NETWORK_PROVIDER)
+                ? locationManager.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER) : null;
         if (lastKnownNetworkLocation != null && lastKnownNetworkLocation.getTime() >= minLocationTime) {
             return lastKnownNetworkLocation;
         }
@@ -96,18 +150,15 @@ public class LocationManager {
         criteria.setAccuracy(enableHighAccuracy ? Criteria.ACCURACY_FINE : Criteria.ACCURACY_COARSE);
 
         CurrentLocationListener locationListener = new CurrentLocationListener();
-        locationManager.requestSingleUpdate(criteria, locationListener, Looper.getMainLooper());
-
-        if (!locationListener.mCountDownLatch.await(timeout, TimeUnit.MILLISECONDS)) {
-            locationManager.removeUpdates(locationListener);
-            throw new TimeoutException();
-        }
-
-        if (locationListener.mLocation != null) {
+        try {
+            locationManager.requestSingleUpdate(criteria, locationListener, Looper.getMainLooper());
+            if (!locationListener.mCountDownLatch.await(timeout, TimeUnit.MILLISECONDS)) {
+                throw new TimeoutException();
+            }
             return locationListener.mLocation;
+        } finally {
+            locationManager.removeUpdates(locationListener);
         }
-
-        return null;
     }
 
     static class CurrentLocationListener implements LocationListener {
